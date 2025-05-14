@@ -1,0 +1,33 @@
+{
+  "name": "2089194-race-timer-cw",
+  "version": "1.0.0",
+  "description": "race timer cw 25",
+  "main": "svr.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node svr.js",
+    "setup": "node setup.js"
+  },
+  "keywords": [
+    "cw"
+  ],
+  "author": "2089194",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  },
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-portsoc": "^1.0.1"
+  },
+  "eslintConfig": {
+    "extends": "portsoc",
+    "root": true,
+    "env": {
+      "browser": true
+    }
+  }
+}

@@ -1,0 +1,41 @@
+async function loadResults() {
+  try {
+    const res = await fetch('/results');
+    if (!res.ok) {
+      throw new Error('Failed to fetch results');
+    }
+    const data = await res.json();
+
+    const div = document.getElementById('results');
+    div.innerHTML = '';
+
+    data.forEach((r, i) => {
+      const p = document.createElement('p');
+      const secs = Math.floor(r.finish_time / 1000);
+      p.textContent = `#${i + 1} - Runner ${r.runnerId}: ${secs}s`;
+      div.appendChild(p);
+    });
+
+    // Enable CSV download
+    document.getElementById('downloadCSV').addEventListener('click', () => {
+      const csvContent = 'data:text/csv;charset=utf-8,' +
+        ['Position,Runner ID,Finish Time (ms)']
+          .concat(data.map((r, i) => `${i + 1},${r.runnerId},${r.finish_time}`))
+          .join('\n');
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'race_results.csv');
+
+      // Append to DOM, click, and remove link after download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  } catch (error) {
+    console.error('Error loading results:', error);
+  }
+}
+
+loadResults();
