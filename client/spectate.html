@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Spectator View</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <h1>Live Race Results</h1>
-  <div id="results">Loading...</div>
-
+  <div id="results">Loading…</div>
   <script>
-    /* format 00:00:00 */
+    // Format milliseconds → hh:mm:ss
     function formatDuration(ms) {
       const t = Math.floor(ms / 1000);
       const h = String(Math.floor(t / 3600)).padStart(2, '0');
@@ -19,35 +18,49 @@
       return `${h}:${m}:${s}`;
     }
 
-    async function fetchResults() {
-      const sessionId = localStorage.getItem('currentResultsSession');
-      if (!sessionId) {
-        document.getElementById('results').textContent =
-          'No race in progress.';
-        return;
-      }
-
-      const res  = await fetch(`/results?sessionId=${sessionId}`);
-      const data = await res.json();
-
-      const box = document.getElementById('results');
-      box.innerHTML = '';                               // clear old list
-
-      if (data.length === 0) {
-        box.textContent = 'No finishers yet.';
-        return;
-      }
-
-      data.forEach(r => {
-        const line = document.createElement('p');
-        line.className = 'runner';
-        line.textContent = `Runner ${r.runnerId} – ${formatDuration(r.finish_time)}`;
-        box.appendChild(line);
-      });
+    // Find sessionId from URL (?sessionId=xxx) or localStorage fallback
+    function getSessionId() {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('sessionId') ||
+             localStorage.getItem('currentResultsSession') ||
+             localStorage.getItem('sessionId');
     }
 
-    fetchResults();               // first load
-    setInterval(fetchResults, 15000);  // refresh every 15 s
+    async function fetchResults() {
+      const sessionId = getSessionId();
+      const box = document.getElementById('results');
+
+      if (!sessionId) {
+        box.textContent = 'No race in progress.';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/results?sessionId=${sessionId}`);
+        if (!res.ok) throw new Error('Server error');
+        const data = await res.json();
+
+        box.innerHTML = '';                     // clear old list
+        if (!Array.isArray(data) || data.length === 0) {
+          box.textContent = 'No finishers yet.';
+          return;
+        }
+
+        // Create an element for each finisher
+        data.forEach(r => {
+          const p = document.createElement('p');
+          p.className = 'runner';
+          p.textContent = `Runner ${r.runnerId} – ${formatDuration(r.finish_time)}`;
+          box.appendChild(p);
+        });
+      } catch (err) {
+        box.textContent = 'Error loading results.';
+        console.error(err);
+      }
+    }
+
+    fetchResults();                 // initial load
+    setInterval(fetchResults, 15000); // refresh every 15 s
   </script>
 </body>
 </html>

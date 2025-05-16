@@ -97,6 +97,15 @@ function resetIds() {
   localStorage.removeItem(LS.RESULTS);
 }
 
+document.getElementById('copySpectatorLink').addEventListener('click', () => {
+  const sessionId = localStorage.getItem('sessionId');
+  const url = `${location.origin}/spectate.html?sessionId=${sessionId}`;
+  navigator.clipboard.writeText(url)
+    .then(() => alert('Spectator link copied: ' + url))
+    .catch(err => alert('Failed to copy link: ' + err));
+});
+
+
 // Initialize the app
 function init() {
   el.timerParagraph = document.querySelector('#timerParagraph');
