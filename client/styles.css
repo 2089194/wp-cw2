@@ -39,4 +39,9 @@ body {
     border-bottom: 1px solid #ccc;
     padding: 0.5em 0;
   }
-  
+
+  /* Spectator View Styles */
+.runner {
+  font-size: 1.5rem;
+  padding: 0.25rem 0;
+}

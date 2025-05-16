@@ -1,3 +1,11 @@
+function formatDuration(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 async function loadResults() {
   try {
     // Fetch only the session chosen by the timer page
@@ -14,17 +22,17 @@ async function loadResults() {
 
     data.forEach((r, i) => {
       const p = document.createElement('p');
-      const secs = Math.floor(r.finish_time / 1000);
-      p.textContent = `#${i + 1} - Runner ${r.runnerId}: ${secs}s`;
+      const formatted = formatDuration(r.finish_time);
+      p.textContent = `#${i + 1} - Runner ${r.runnerId}: ${formatted}`;
       div.appendChild(p);
     });
 
     // Enable CSV download
     document.getElementById('downloadCSV').addEventListener('click', () => {
       const csvContent = 'data:text/csv;charset=utf-8,' +
-        ['Position,Runner ID,Finish Time (ms)']
-          .concat(data.map((r, i) => `${i + 1},${r.runnerId},${r.finish_time}`))
-          .join('\n');
+      ['Position,Runner ID,Finish Time']
+        .concat(data.map((r, i) => `${i + 1},${r.runnerId},${formatDuration(r.finish_time)}`))
+        .join('\n');
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');

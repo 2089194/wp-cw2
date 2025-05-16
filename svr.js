@@ -63,7 +63,7 @@ app.post('/results', async (req, res) => {
       throw new Error('Invalid data structure');
     }
 
-    await race.saveResults(results, sessionId); //Function handles the sessionId
+    await race.saveResults(results, sessionId); // Function handles the sessionId
     res.json({ status: 'ok' });
   } catch (err) {
     console.error('Error saving results:', err);
