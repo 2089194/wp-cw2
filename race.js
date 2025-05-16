@@ -35,7 +35,7 @@ export async function getResults(sessionId) {
   );
 }
 
-// convenience when /results is called with no ?sessionId
+// For use when /results is called with no ?sessionId
 export async function getAllResults() {
   const db = await dbConn;
   return db.all('SELECT * FROM Results ORDER BY finish_time ASC');

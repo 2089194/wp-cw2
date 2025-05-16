@@ -3,7 +3,7 @@ let results = [];
 
 const el = {};
 
-// --- localStorage keys grouped in one place ------------
+// --- localStorage keys ---
 const LS = {
   RESULTS: 'raceResults', // pending batch
   NEXT_ID: 'nextRunnerId', // runner counter
@@ -80,7 +80,7 @@ async function uploadResults() {
     alert('Error uploading: ' + err.message);
   }
 
-  localStorage.setItem('currentResultsSession', currentSession); // remember which session the spectator/results page should fetch
+  localStorage.setItem('currentResultsSession', currentSession); // remember which session the results page should fetch
 }
 
 

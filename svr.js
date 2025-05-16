@@ -1,10 +1,10 @@
 import express from 'express';
 import * as race from './race.js';
-import fs from 'fs/promises'; // make sure this is at the top with other imports
+import fs from 'fs/promises';
 
 const app = express();
 
-// Use JSON middleware to handle incoming requests
+// Handle incoming requests
 app.use(express.json());
 
 app.get('/results', async (req, res) => {
@@ -12,7 +12,7 @@ app.get('/results', async (req, res) => {
     const sessionId = req.query.sessionId;
     const data = sessionId
       ? await race.getResults(sessionId)
-      : await race.getAllResults(); // new helper
+      : await race.getAllResults();
     res.json(data);
   } catch (err) {
     console.error('Error fetching results:', err);
@@ -55,7 +55,7 @@ app.get('/export/:sessionId', async (req, res) => {
 
 app.post('/results', async (req, res) => {
   try {
-    console.log('Received request body:', req.body); // Log the request body for debugging
+    console.log('Received request body:', req.body); // Log the request for debugging
 
     const { results, sessionId } = req.body;
 
@@ -63,7 +63,7 @@ app.post('/results', async (req, res) => {
       throw new Error('Invalid data structure');
     }
 
-    await race.saveResults(results, sessionId); // Make sure this function handles the sessionId
+    await race.saveResults(results, sessionId); //Function handles the sessionId
     res.json({ status: 'ok' });
   } catch (err) {
     console.error('Error saving results:', err);

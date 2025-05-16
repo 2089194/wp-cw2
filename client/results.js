@@ -1,6 +1,6 @@
 async function loadResults() {
   try {
-    // fetch only the session chosen by the timer page
+    // Fetch only the session chosen by the timer page
     const sessionId = localStorage.getItem('currentResultsSession') ||
     localStorage.getItem('sessionId') || ''; const url = sessionId ? `/results?sessionId=${sessionId}` : '/results';
 
