@@ -1,10 +1,13 @@
 async function loadResults() {
   try {
-    const res = await fetch('/results');
-    if (!res.ok) {
-      throw new Error('Failed to fetch results');
-    }
+    // fetch only the session chosen by the timer page
+    const sessionId = localStorage.getItem('currentResultsSession') ||
+    localStorage.getItem('sessionId') || ''; const url = sessionId ? `/results?sessionId=${sessionId}` : '/results';
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch results');
     const data = await res.json();
+
 
     const div = document.getElementById('results');
     div.innerHTML = '';

@@ -3,6 +3,15 @@ let results = [];
 
 const el = {};
 
+// --- localStorage keys grouped in one place ------------
+const LS = {
+  RESULTS: 'raceResults', // pending batch
+  NEXT_ID: 'nextRunnerId', // runner counter
+  SESSION: 'sessionId', // current race id
+  START: 'timerStart', // start time ms
+};
+
+
 // Function to format time in minutes and seconds
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -16,38 +25,53 @@ let sessionId = Date.now(); // Use timestamp as session ID
 
 function startRace() {
   timerStart = Date.now();
+  sessionId = String(Date.now()); // fresh id
   results = [];
-  localStorage.setItem('raceResults', JSON.stringify(results));
 
-  // Use the session ID when saving results
-  sessionId = Date.now(); // New session ID for each race session
+  localStorage.setItem(LS.SESSION, sessionId);
+  localStorage.setItem(LS.START, String(timerStart));
+  resetIds(); // ids + pending batch cleared
+
   el.timerParagraph.textContent = 'Race started!';
 }
-
 
 // Function to record finish time and store it in local storage
 function recordFinish() {
   if (!timerStart) return alert('Start the race first');
   const finishTime = Date.now() - timerStart;
-  const runnerId = results.length + 1;
+
+  const runnerId = nextId();
+
   results.push({ runnerId, finish_time: finishTime });
-  el.timerParagraph.textContent = `Runner ${runnerId} finished at ${formatTime(finishTime)}`;
+  el.timerParagraph.textContent =
+    `Runner ${runnerId} finished at ${formatTime(finishTime)}`;
   localStorage.setItem('raceResults', JSON.stringify(results));
+
+  console.log('nextRunnerId =', localStorage.getItem(LS.NEXT_ID));
 }
+
 
 async function uploadResults() {
   const stored = JSON.parse(localStorage.getItem('raceResults') || '[]');
-  if (stored.length === 0) return alert('No results to upload');
+  const currentSession = localStorage.getItem('sessionId');
+
+  if (stored.length === 0 || !currentSession) {
+    return alert('No results or session to upload');
+  }
 
   try {
     const res = await fetch('/results', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ results: stored, sessionId }), // Include session ID here
+      body: JSON.stringify({
+        results: stored,
+        sessionId: currentSession,
+      }),
     });
+
     if (res.ok) {
       alert('Results uploaded');
-      localStorage.removeItem('raceResults');
+      localStorage.removeItem(LS.RESULTS); // clear just-uploaded batch
       results = [];
     } else {
       alert('Upload failed');
@@ -55,8 +79,23 @@ async function uploadResults() {
   } catch (err) {
     alert('Error uploading: ' + err.message);
   }
+
+  localStorage.setItem('currentResultsSession', currentSession); // remember which session the spectator/results page should fetch
 }
 
+
+function nextId() {
+  const current = Number(localStorage.getItem(LS.NEXT_ID) || '1');
+  const next = current + 1;
+  localStorage.setItem(LS.NEXT_ID, String(next)); // persist NEW value
+  return current; // return the runner ID just used
+}
+
+
+function resetIds() {
+  localStorage.setItem(LS.NEXT_ID, '1');
+  localStorage.removeItem(LS.RESULTS);
+}
 
 // Initialize the app
 function init() {
@@ -68,6 +107,9 @@ function init() {
   el.startButton.addEventListener('click', startRace);
   el.finishButton.addEventListener('click', recordFinish);
   el.uploadButton.addEventListener('click', uploadResults);
+
+  sessionId = localStorage.getItem(LS.SESSION) || String(Date.now());
+  localStorage.setItem(LS.SESSION, sessionId);
 
   const stored = localStorage.getItem('raceResults');
   if (stored) results = JSON.parse(stored);
