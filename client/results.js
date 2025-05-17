@@ -8,9 +8,17 @@ function formatDuration(ms) {
 
 async function loadResults() {
   try {
-    // Fetch only the session chosen by the timer page
-    const sessionId = localStorage.getItem('currentResultsSession') ||
-    localStorage.getItem('sessionId') || ''; const url = sessionId ? `/results?sessionId=${sessionId}` : '/results';
+    const sessionId =
+        localStorage.getItem('currentResultsSession') ||
+        localStorage.getItem('sessionId');
+
+    if (!sessionId) {
+      document.getElementById('results').textContent =
+        'No race selected. Start or prepare a race first.';
+      return;
+    }
+
+    const url = `/results?sessionId=${sessionId}`;
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch results');

@@ -1,19 +1,30 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Race Timer</title>
-    <script defer src="index.js"></script>
-    <link rel="stylesheet" href="styles.css">
-  </head>
-  <body>
-    <h1>Race Control</h1>
-    <p id="timerParagraph">00:00</p>
-    <button id="startButton">Start Race</button>
-    <button id="finishButton">Record Finish</button>
-    <button id="uploadButton">Upload Results</button>
-    <button onclick="location.href='results.html'">View Results</button>
-    <button id="copySpectatorLink">Copy Spectator Link</button>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Race Timer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="index.js"></script>
+</head>
+<body>
+  <h1>Race Control</h1>
+
+  <p id="timerParagraph">00:00</p>
+
+  <button id="prepareButton">Prepare Race (share link)</button>
+  <button id="startButton">Start Race</button>
+  <button id="finishButton">Record Finish</button>
+  <button id="uploadButton">Upload Results</button>
+  <button id="endButton">End Race</button>         <!-- NEW -->
+  <button onclick="location.href='results.html'">View Results</button>  
+
+  <!-- Spectator-link UI (hidden until link exists) -->
+  <div id="linkBox" style="display:none; margin-top:1em">
+    <label for="spectatorLink"><strong>Spectator link:</strong></label>
+    <input id="spectatorLink" type="text" readonly
+           style="width:100%; font-size:1rem; margin:0.5em 0" />
+    <button id="copySpectatorLink">Copy Link</button>
+  </div>
+</body>
 </html>

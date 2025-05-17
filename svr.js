@@ -71,7 +71,6 @@ app.post('/results', async (req, res) => {
   }
 });
 
-
 // Serve static files (HTML, CSS, JS) after API routes
 app.use(express.static('client', { extensions: ['html'] }));
 

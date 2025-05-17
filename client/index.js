@@ -1,94 +1,101 @@
+/* ---------- state & helpers ---------- */
 let timerStart = null;
 let results = [];
+let sessionId = null;
 
-const el = {};
+const el = {}; // cache DOM refs
 
-// --- localStorage keys ---
 const LS = {
   RESULTS: 'raceResults', // pending batch
   NEXT_ID: 'nextRunnerId', // runner counter
   SESSION: 'sessionId', // current race id
-  START: 'timerStart', // start time ms
+  START: 'timerStart', // start time (ms)
 };
 
-
-// Function to format time in minutes and seconds
 function formatTime(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}m ${secs}s`;
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}m ${s}s`;
 }
 
-// Function to start the race, record the start time, and update the UI
-let sessionId = Date.now(); // Use timestamp as session ID
+function showSpectatorLink() {
+  const url = `${location.origin}/spectate.html?sessionId=${sessionId}`;
+  localStorage.setItem('currentResultsSession', sessionId);
+  el.spectatorInput.value = url;
+  el.linkBox.style.display = 'block';
+}
+
+function prepareRace() {
+  // reserve a sessionId if none yet
+  if (!localStorage.getItem(LS.SESSION)) {
+    sessionId = String(Date.now());
+    localStorage.setItem(LS.SESSION, sessionId);
+  } else {
+    sessionId = localStorage.getItem(LS.SESSION);
+  }
+  showSpectatorLink();
+}
 
 function startRace() {
   timerStart = Date.now();
-  sessionId = String(Date.now()); // fresh id
+  sessionId = localStorage.getItem(LS.SESSION) || String(Date.now());
   results = [];
 
   localStorage.setItem(LS.SESSION, sessionId);
   localStorage.setItem(LS.START, String(timerStart));
-  resetIds(); // ids + pending batch cleared
+  resetIds();
 
-  el.timerParagraph.textContent = 'Race started!';
+  el.timer.textContent = 'Race started!';
+  showSpectatorLink(); // make sure link visible even if prepare skipped
 }
 
-// Function to record finish time and store it in local storage
 function recordFinish() {
   if (!timerStart) return alert('Start the race first');
   const finishTime = Date.now() - timerStart;
-
   const runnerId = nextId();
 
   results.push({ runnerId, finish_time: finishTime });
-  el.timerParagraph.textContent =
-    `Runner ${runnerId} finished at ${formatTime(finishTime)}`;
-  localStorage.setItem('raceResults', JSON.stringify(results));
-
-  console.log('nextRunnerId =', localStorage.getItem(LS.NEXT_ID));
+  el.timer.textContent = `Runner ${runnerId} finished at ${formatTime(finishTime)}`;
+  localStorage.setItem(LS.RESULTS, JSON.stringify(results));
 }
 
-
 async function uploadResults() {
-  const stored = JSON.parse(localStorage.getItem('raceResults') || '[]');
-  const currentSession = localStorage.getItem('sessionId');
-
-  if (stored.length === 0 || !currentSession) {
-    return alert('No results or session to upload');
-  }
+  const batch = JSON.parse(localStorage.getItem(LS.RESULTS) || '[]');
+  const currentSession = localStorage.getItem(LS.SESSION);
+  if (batch.length === 0) return alert('No results to upload');
 
   try {
     const res = await fetch('/results', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        results: stored,
-        sessionId: currentSession,
-      }),
+      body: JSON.stringify({ results: batch, sessionId: currentSession }),
     });
 
     if (res.ok) {
       alert('Results uploaded');
       localStorage.removeItem(LS.RESULTS); // clear just-uploaded batch
       results = [];
-    } else {
-      alert('Upload failed');
-    }
-  } catch (err) {
-    alert('Error uploading: ' + err.message);
-  }
-
-  localStorage.setItem('currentResultsSession', currentSession); // remember which session the results page should fetch
+    } else { alert('Upload failed'); }
+  } catch (e) { alert('Error: ' + e.message); }
 }
 
-
 function nextId() {
-  const current = Number(localStorage.getItem(LS.NEXT_ID) || '1');
-  const next = current + 1;
-  localStorage.setItem(LS.NEXT_ID, String(next)); // persist NEW value
-  return current; // return the runner ID just used
+  const cur = Number(localStorage.getItem(LS.NEXT_ID) || '1');
+  localStorage.setItem(LS.NEXT_ID, String(cur + 1));
+  return cur;
+}
+
+function endRace() {
+  // clear session so a new Prepare will get a fresh id
+  localStorage.removeItem(LS.SESSION);
+  localStorage.removeItem('currentResultsSession');
+  resetIds(); // clear runner counter + pending batch
+  results = [];
+  sessionId = null;
+
+  el.timer.textContent = 'Race ended. Click "Prepare Race" for a new race.';
+  el.linkBox.style.display = 'none'; // hide old link
 }
 
 
@@ -97,31 +104,37 @@ function resetIds() {
   localStorage.removeItem(LS.RESULTS);
 }
 
-document.getElementById('copySpectatorLink').addEventListener('click', () => {
-  const sessionId = localStorage.getItem('sessionId');
-  const url = `${location.origin}/spectate.html?sessionId=${sessionId}`;
-  navigator.clipboard.writeText(url)
-    .then(() => alert('Spectator link copied: ' + url))
-    .catch(err => alert('Failed to copy link: ' + err));
-});
-
-
-// Initialize the app
 function init() {
-  el.timerParagraph = document.querySelector('#timerParagraph');
-  el.startButton = document.querySelector('#startButton');
-  el.finishButton = document.querySelector('#finishButton');
-  el.uploadButton = document.querySelector('#uploadButton');
+  el.timer = document.getElementById('timerParagraph');
+  el.prepareBtn = document.getElementById('prepareButton');
+  el.startBtn = document.getElementById('startButton');
+  el.finishBtn = document.getElementById('finishButton');
+  el.uploadBtn = document.getElementById('uploadButton');
+  el.copyLinkBtn = document.getElementById('copySpectatorLink');
+  el.spectatorInput = document.getElementById('spectatorLink');
+  el.linkBox = document.getElementById('linkBox');
 
-  el.startButton.addEventListener('click', startRace);
-  el.finishButton.addEventListener('click', recordFinish);
-  el.uploadButton.addEventListener('click', uploadResults);
+  // attach events
+  el.prepareBtn.addEventListener('click', prepareRace);
+  el.startBtn.addEventListener('click', startRace);
+  el.finishBtn.addEventListener('click', recordFinish);
+  el.uploadBtn.addEventListener('click', uploadResults);
+  el.endBtn = document.getElementById('endButton');
+  el.endBtn.addEventListener('click', endRace);
 
-  sessionId = localStorage.getItem(LS.SESSION) || String(Date.now());
-  localStorage.setItem(LS.SESSION, sessionId);
 
-  const stored = localStorage.getItem('raceResults');
+  el.copyLinkBtn.addEventListener('click', () => {
+    const url = el.spectatorInput.value;
+    navigator.clipboard.writeText(url)
+      .then(() => alert('Spectator link copied!'))
+      .catch(err => alert('Copy failed: ' + err));
+  });
+
+  /* restore any in-progress race */
+  sessionId = localStorage.getItem(LS.SESSION);
+  if (sessionId) showSpectatorLink();
+
+  const stored = localStorage.getItem(LS.RESULTS);
   if (stored) results = JSON.parse(stored);
 }
-
 init();
