@@ -156,7 +156,14 @@ function init() {
   el.startBtn.addEventListener('click', startRace);
   el.finishBtn.addEventListener('click', recordFinish);
   el.uploadBtn.addEventListener('click', uploadResults);
-  el.endBtn.addEventListener('click', endRace);
+  el.endBtn.addEventListener('click', () => {
+    const confirmed = confirm(
+      'Are you sure you want to end the race?\n\nThis will disable recording and require starting a new session.',
+    );
+    if (confirmed) {
+      endRace();
+    }
+  });
 
   el.copyLinkBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(el.spectatorInput.value)
