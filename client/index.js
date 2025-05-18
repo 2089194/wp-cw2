@@ -1,4 +1,3 @@
-/* ---------- state & helpers ---------- */
 let timerStart = null;
 let results = [];
 let sessionId = null;
@@ -10,6 +9,8 @@ const LS = {
   NEXT_ID: 'nextRunnerId', // runner counter
   SESSION: 'sessionId', // current race id
   START: 'timerStart', // start time (ms)
+  LAST_RESULTS: 'lastUploadedResults', // persisting results unitl new race start
+
 };
 
 function formatTime(ms) {
@@ -39,6 +40,10 @@ function prepareRace() {
 
 function startRace() {
   timerStart = Date.now();
+  // starting a brand-new race will discard previous race’s persisted list
+  localStorage.removeItem(LS.LAST_RESULTS);
+
+
   sessionId = localStorage.getItem(LS.SESSION) || String(Date.now());
   results = [];
 
@@ -84,10 +89,21 @@ async function uploadResults() {
 
     if (res.ok) {
       alert('Results uploaded');
+
+      // persists full race so far
+      const prev = JSON.parse(localStorage.getItem(LS.LAST_RESULTS) || '[]');
+      const merged = prev.concat(batch) // append this batch
+        .sort((a, b) => a.finish_time - b.finish_time); // keep chronological
+      localStorage.setItem(LS.LAST_RESULTS, JSON.stringify(merged));
+
       localStorage.removeItem(LS.RESULTS); // clear just-uploaded batch
       results = [];
-    } else { alert('Upload failed'); }
-  } catch (e) { alert('Error: ' + e.message); }
+    } else {
+      alert('Upload failed');
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 function nextId() {
@@ -148,14 +164,14 @@ function init() {
       .catch(err => alert('Copy failed: ' + err));
   });
 
-  /* ---------- restore state ---------- */
+  // restore state from localStorage
   sessionId = localStorage.getItem(LS.SESSION);
   const startRaw = localStorage.getItem(LS.START);
   const hasSession = !!sessionId;
   const hasStart = !!startRaw && !isNaN(Number(startRaw));
 
-  // If both session and valid start timestamp exist -> race is running
   const raceIsRunning = hasSession && hasStart;
+
 
   if (raceIsRunning) {
     showSpectatorLink();
@@ -169,8 +185,13 @@ function init() {
     el.uploadBtn.disabled = false;
     el.endBtn.disabled = false;
   } else {
-    // Clean up any broken state
+    // Clean up any broken or half-finished state
     localStorage.removeItem(LS.START);
+
+    if (hasSession && !hasStart) {
+      localStorage.removeItem(LS.SESSION);
+      sessionId = null;
+    }
 
     el.startBtn.disabled = false;
     el.startBtn.title = '';

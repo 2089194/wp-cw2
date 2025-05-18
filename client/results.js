@@ -1,59 +1,78 @@
+const LS = {
+  LAST: 'lastUploadedResults', // permanent copy of last race
+  CURR: 'currentResultsSession',
+  SESSION: 'sessionId',
+};
+
+
 function formatDuration(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-  const seconds = String(totalSeconds % 60).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
+  const tot = Math.floor(ms / 1000);
+  const h = String(Math.floor(tot / 3600)).padStart(2, '0');
+  const m = String(Math.floor((tot % 3600) / 60)).padStart(2, '0');
+  const s = String(tot % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function render(data) {
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    box.textContent = 'No results available yet.';
+    return;
+  }
+
+  data.forEach((r, i) => {
+    const p = document.createElement('p');
+    p.textContent = `#${i + 1} – Runner ${r.runnerId}: ${formatDuration(r.finish_time)}`;
+    box.appendChild(p);
+  });
+
+  // CSV download
+  document.getElementById('downloadCSV').onclick = () => {
+    const csv = ['Position,Runner ID,Finish Time']
+      .concat(data.map((r, i) =>
+        `${i + 1},${r.runnerId},${formatDuration(r.finish_time)}`))
+      .join('\n');
+
+    const link = document.createElement('a');
+    link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    link.download = 'race_results.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 }
 
 async function loadResults() {
-  try {
-    const sessionId =
-        localStorage.getItem('currentResultsSession') ||
-        localStorage.getItem('sessionId');
+  const sessionId =
+    localStorage.getItem(LS.CURR) ||
+    localStorage.getItem(LS.SESSION);
 
-    if (!sessionId) {
-      document.getElementById('results').textContent =
-        'No race selected. Start or prepare a race first.';
-      return;
+  if (sessionId) {
+    try {
+      const res = await fetch(`/results?sessionId=${sessionId}`);
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+
+      if (Array.isArray(data) && data.length > 0) {
+        render(data);
+        return;
+      } else {
+        throw new Error('No live results found');
+      }
+    } catch (e) {
+      console.warn('Live fetch failed or empty, falling back to last results.', e);
     }
+  }
 
-    const url = `/results?sessionId=${sessionId}`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch results');
-    const data = await res.json();
-
-
-    const div = document.getElementById('results');
-    div.innerHTML = '';
-
-    data.forEach((r, i) => {
-      const p = document.createElement('p');
-      const formatted = formatDuration(r.finish_time);
-      p.textContent = `#${i + 1} - Runner ${r.runnerId}: ${formatted}`;
-      div.appendChild(p);
-    });
-
-    // Enable CSV download
-    document.getElementById('downloadCSV').addEventListener('click', () => {
-      const csvContent = 'data:text/csv;charset=utf-8,' +
-      ['Position,Runner ID,Finish Time']
-        .concat(data.map((r, i) => `${i + 1},${r.runnerId},${formatDuration(r.finish_time)}`))
-        .join('\n');
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', 'race_results.csv');
-
-      // Append to DOM, click, and remove link after download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    });
-  } catch (error) {
-    console.error('Error loading results:', error);
+  // Fallback to last uploaded race (if any)
+  const last = localStorage.getItem(LS.LAST);
+  if (last) {
+    render(JSON.parse(last));
+  } else {
+    document.getElementById('results').textContent =
+      'No race selected and no previous results found.';
   }
 }
 
