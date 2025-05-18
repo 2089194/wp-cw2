@@ -48,6 +48,16 @@ function startRace() {
 
   el.timer.textContent = 'Race started!';
   showSpectatorLink(); // make sure link visible even if prepare skipped
+
+  el.startBtn.disabled = true; // prevent restarting race timer
+  el.startBtn.title = 'Race already started';
+
+  el.prepareBtn.disabled = true; // lock prepare once race has started
+  el.prepareBtn.title = 'Race already started';
+
+  el.finishBtn.disabled = false;
+  el.uploadBtn.disabled = false;
+  el.endBtn.disabled = false;
 }
 
 function recordFinish() {
@@ -96,6 +106,16 @@ function endRace() {
 
   el.timer.textContent = 'Race ended. Click "Prepare Race" for a new race.';
   el.linkBox.style.display = 'none'; // hide old link
+
+  el.startBtn.disabled = false; // re-enable for next race
+  el.startBtn.title = '';
+
+  el.prepareBtn.disabled = false; // allow preparing again
+  el.prepareBtn.title = '';
+
+  el.finishBtn.disabled = true;
+  el.uploadBtn.disabled = true;
+  el.endBtn.disabled = true;
 }
 
 
@@ -110,6 +130,7 @@ function init() {
   el.startBtn = document.getElementById('startButton');
   el.finishBtn = document.getElementById('finishButton');
   el.uploadBtn = document.getElementById('uploadButton');
+  el.endBtn = document.getElementById('endButton');
   el.copyLinkBtn = document.getElementById('copySpectatorLink');
   el.spectatorInput = document.getElementById('spectatorLink');
   el.linkBox = document.getElementById('linkBox');
@@ -119,22 +140,52 @@ function init() {
   el.startBtn.addEventListener('click', startRace);
   el.finishBtn.addEventListener('click', recordFinish);
   el.uploadBtn.addEventListener('click', uploadResults);
-  el.endBtn = document.getElementById('endButton');
   el.endBtn.addEventListener('click', endRace);
 
-
   el.copyLinkBtn.addEventListener('click', () => {
-    const url = el.spectatorInput.value;
-    navigator.clipboard.writeText(url)
+    navigator.clipboard.writeText(el.spectatorInput.value)
       .then(() => alert('Spectator link copied!'))
       .catch(err => alert('Copy failed: ' + err));
   });
 
-  /* restore any in-progress race */
+  /* ---------- restore state ---------- */
   sessionId = localStorage.getItem(LS.SESSION);
-  if (sessionId) showSpectatorLink();
+  const startRaw = localStorage.getItem(LS.START);
+  const hasSession = !!sessionId;
+  const hasStart = !!startRaw && !isNaN(Number(startRaw));
+
+  // If both session and valid start timestamp exist -> race is running
+  const raceIsRunning = hasSession && hasStart;
+
+  if (raceIsRunning) {
+    showSpectatorLink();
+
+    el.startBtn.disabled = true;
+    el.startBtn.title = 'Race already started';
+    el.prepareBtn.disabled = true;
+    el.prepareBtn.title = 'Race already started';
+
+    el.finishBtn.disabled = false;
+    el.uploadBtn.disabled = false;
+    el.endBtn.disabled = false;
+  } else {
+    // Clean up any broken state
+    localStorage.removeItem(LS.START);
+
+    el.startBtn.disabled = false;
+    el.startBtn.title = '';
+    el.prepareBtn.disabled = false;
+    el.prepareBtn.title = '';
+
+    el.finishBtn.disabled = true;
+    el.uploadBtn.disabled = true;
+    el.endBtn.disabled = true;
+
+    el.linkBox.style.display = 'none'; // hide link if any
+  }
 
   const stored = localStorage.getItem(LS.RESULTS);
   if (stored) results = JSON.parse(stored);
 }
+
 init();
