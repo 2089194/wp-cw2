@@ -28,17 +28,30 @@ function showSpectatorLink() {
 }
 
 function prepareRace() {
-  // reserve a sessionId if none yet
   if (!localStorage.getItem(LS.SESSION)) {
     sessionId = String(Date.now());
     localStorage.setItem(LS.SESSION, sessionId);
   } else {
     sessionId = localStorage.getItem(LS.SESSION);
   }
+
   showSpectatorLink();
+
+  // Enable start button in case it was previously disabled
+  el.startBtn.disabled = false;
+  el.startBtn.title = '';
+
+  // Disable prepare to prevent repeat clicks
+  el.prepareBtn.disabled = true;
+  el.prepareBtn.title = 'Race prepared. Ready to start.';
 }
 
+
 function startRace() {
+  if (localStorage.getItem(LS.START)) {
+    return; // Prevent duplicate race start
+  }
+
   timerStart = Date.now();
   // starting a brand-new race will discard previous race’s persisted list
   localStorage.removeItem(LS.LAST_RESULTS);
@@ -54,10 +67,10 @@ function startRace() {
   el.timer.textContent = 'Race started!';
   showSpectatorLink(); // make sure link visible even if prepare skipped
 
-  el.startBtn.disabled = true; // prevent restarting race timer
+  el.startBtn.disabled = true; // disable start button
   el.startBtn.title = 'Race already started';
 
-  el.prepareBtn.disabled = true; // lock prepare once race has started
+  el.prepareBtn.disabled = true;
   el.prepareBtn.title = 'Race already started';
 
   el.finishBtn.disabled = false;
@@ -132,6 +145,31 @@ function endRace() {
   el.finishBtn.disabled = true;
   el.uploadBtn.disabled = true;
   el.endBtn.disabled = true;
+
+  localStorage.removeItem(LS.START); // clear timer
+}
+
+
+function updateLiveTimer() {
+  const startZero = localStorage.getItem(LS.START);
+  if (!startZero) return;
+
+  const startTime = Number(startZero);
+  const now = Date.now();
+  const elapsedMs = now - startTime;
+
+  const mins = String(Math.floor(elapsedMs / 60000)).padStart(2, '0');
+  const secs = String(Math.floor((elapsedMs % 60000) / 1000)).padStart(2, '0');
+
+  const display = `Race Time: ${mins}:${secs}`;
+  const timerEl = document.getElementById('raceTimer');
+  if (timerEl) timerEl.textContent = display;
+}
+
+// Start interval if race is active
+if (localStorage.getItem(LS.START)) {
+  setInterval(updateLiveTimer, 1000);
+  updateLiveTimer(); // immediately show correct time
 }
 
 
@@ -141,7 +179,7 @@ function resetIds() {
 }
 
 function init() {
-  el.timer = document.getElementById('timerParagraph');
+  el.timer = document.getElementById('raceTimer');
   el.prepareBtn = document.getElementById('prepareButton');
   el.startBtn = document.getElementById('startButton');
   el.finishBtn = document.getElementById('finishButton');

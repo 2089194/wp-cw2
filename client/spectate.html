@@ -8,9 +8,10 @@
 </head>
 <body>
   <h1>Live Race Results</h1>
+  <p id="raceTimer">Race Time: 00:00</p>
   <div id="results">Loading…</div>
   <script>
-    // Format ms -> hh:mm:ss
+    // function to format milliseconds into HH:MM:SS
     function formatDuration(ms) {
       const t = Math.floor(ms / 1000);
       const h = String(Math.floor(t / 3600)).padStart(2, '0');
@@ -18,50 +19,84 @@
       const s = String(t % 60).padStart(2, '0');
       return `${h}:${m}:${s}`;
     }
-
-    // Find sessionId from URL (?sessionId=xxx) or localStorage
-    function getSessionId() {
-      const p = new URLSearchParams(window.location.search);
-      return p.get('sessionId') ||
+    
+    function getSessionId () {
+      const q = new URLSearchParams(location.search);
+      return q.get('sessionId') ||
              localStorage.getItem('currentResultsSession') ||
              localStorage.getItem('sessionId');
     }
-
-    async function fetchResults() {
+    
+    // function a live timer
+    let raceStart   = null;
+    let timerHandle = null;
+    
+    function startLiveTimer () {
+      if (timerHandle) return; // already ticking
+      timerHandle = setInterval(updateTimerLine, 1000);
+      updateTimerLine(); // draw immediately
+    }
+    
+    function stopLiveTimer () {
+      clearInterval(timerHandle);
+      timerHandle = null;
+    }
+    
+    function updateTimerLine () {
+      if (!raceStart) return;
+      const elapsed = Date.now() - raceStart;
+      const mm = String(Math.floor(elapsed / 60000)).padStart(2, '0');
+      const ss = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+      document.getElementById('raceTimer').textContent = `Race Time: ${mm}:${ss}`;
+    }
+    
+    // listen for organiser changing localStorage
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === 'timerStart') {
+        if (ev.newValue) {
+          raceStart = Number(ev.newValue);
+          startLiveTimer();
+        } else {
+          // organiser ended the race -> stop timer
+          stopLiveTimer();
+          document.getElementById('raceTimer').textContent = 'Race Time: 00:00';
+        }
+      }
+    });
+    
+    // grab start time if  opened after race begins
+    const storedStart = localStorage.getItem('timerStart');
+    if (storedStart) {
+      raceStart = Number(storedStart);
+      startLiveTimer();
+    }
+    
+    // live results
+    async function fetchResults () {
       const sessionId = getSessionId();
       const box = document.getElementById('results');
-
-      if (!sessionId) {
-        box.textContent = 'No race in progress.';
-        return;
-      }
-
+      if (!sessionId) { box.textContent = 'No race in progress.'; return; }
+    
       try {
         const res = await fetch(`/results?sessionId=${sessionId}`);
-        if (!res.ok) throw new Error('Server error');
-        const data = await res.json();
-
-        box.innerHTML = '';                     // clear old list
-        if (!Array.isArray(data) || data.length === 0) {
-          box.textContent = 'No finishers yet.';
-          return;
-        }
-
-        // Create an element for each finisher
-        data.forEach(r => {
-          const p = document.createElement('p');
-          p.className = 'runner';
-          p.textContent = `Runner ${r.runnerId} – ${formatDuration(r.finish_time)}`;
-          box.appendChild(p);
-        });
-      } catch (err) {
+        if (!res.ok) throw new Error();
+        const runners = await res.json();
+    
+        box.innerHTML = '';
+        if (runners.length === 0) { box.textContent = 'No finishers yet.'; return; }
+    
+        runners.forEach(r =>
+          box.insertAdjacentHTML('beforeend',
+            `<p class="runner">Runner ${r.runnerId} – ${formatDuration(r.finish_time)}</p>`));
+      } catch {
         box.textContent = 'Error loading results.';
-        console.error(err);
       }
     }
-
-    fetchResults(); // initial load
-    setInterval(fetchResults, 15000); // refresh every 15 s
+    
+    fetchResults();
+    setInterval(fetchResults, 15000);
   </script>
+    
+
 </body>
 </html>
