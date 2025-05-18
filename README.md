@@ -12,15 +12,9 @@ A web-based race timer app that times runners and lets spectators follow live re
 ### Prepare / Share spectator link  
 * **Where:** `index.html` -> **Prepare Race (share spectator link)** button  
 * **What it does:**  
-<<<<<<< HEAD
   * Allocates a fresh `sessionId` in `localStorage`.  
   * Builds a shareable URL of the form `/spectate.html?sessionId=…` and places it in a read-only input.  
   * Disables itself (prevents double-click mistakes) while enabling **Start Race**.  
-=======
-  1. Allocates a fresh `sessionId` in `localStorage`.  
-  2. Builds a shareable URL of the form `/spectate.html?sessionId=…` and places it in a read-only input.  
-  3. Disables itself (prevents double-click mistakes) while enabling **Start Race**.  
->>>>>>> ac2266dae82c238157482635e62774b9aa391704
 
 ### Start / Live timer  
 * **Where:** **Start Race** button  
